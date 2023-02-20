@@ -80,106 +80,40 @@ class GameState:
                 moves.append(Move((r, c), (r + 1, c + 1), self.board, self.move_log))
 
     def get_rook_moves(self, r, c, moves):
-        for i in range(r + 1, len(self.board)):  # vertical down
-            if self.board[i][c] == "--":
-                moves.append(Move((r, c), (i, c), self.board, self.move_log))
-                continue
-            if (self.white_move and self.board[i][c][0] == "b") or (not self.white_move and self.board[i][c][0] == "w"):
-                moves.append(Move((r, c), (i, c), self.board, self.move_log))
-                break
-            if (self.white_move and self.board[i][c][0] == "w") or (not self.white_move and self.board[i][c][0] == "b"):
-                break
-
-        for i in range(r - 1, -1, -1):  # vertical up
-            if self.board[i][c] == "--":
-                moves.append(Move((r, c), (i, c), self.board, self.move_log))
-                continue
-            if (self.white_move and self.board[i][c][0] == "b") or (not self.white_move and self.board[i][c][0] == "w"):
-                moves.append(Move((r, c), (i, c), self.board, self.move_log))
-                break
-            if (self.white_move and self.board[i][c][0] == "w") or (not self.white_move and self.board[i][c][0] == "b"):
-                break
-
-        for i in range(c + 1, len(self.board)):  # horizontal right
-            if self.board[r][i] == "--":
-                moves.append(Move((r, c), (r, i), self.board, self.move_log))
-                continue
-            if (self.white_move and self.board[r][i][0] == "b") or (not self.white_move and self.board[r][i][0] == "w"):
-                moves.append(Move((r, c), (r, i), self.board, self.move_log))
-                break
-            if (self.white_move and self.board[r][i][0] == "w") or (not self.white_move and self.board[r][i][0] == "b"):
-                break
-
-        for i in range(c - 1, -1, -1):  # horizontal left
-            if self.board[r][i] == "--":
-                moves.append(Move((r, c), (r, i), self.board, self.move_log))
-                continue
-            if (self.white_move and self.board[r][i][0] == "b") or (not self.white_move and self.board[r][i][0] == "w"):
-                moves.append(Move((r, c), (r, i), self.board, self.move_log))
-                break
-            if (self.white_move and self.board[r][i][0] == "w") or (not self.white_move and self.board[r][i][0] == "b"):
-                break
+        directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+        for d in directions:
+            for i in range(1, len(self.board)):
+                row = r + (d[0] * i)
+                col = c + (d[1] * i)
+                if (row in range(len(self.board))) and (col in range(len(self.board[0]))):
+                    if self.board[row][col] == "--":
+                        moves.append(Move((r, c), (row, col), self.board, self.move_log))
+                        continue
+                    if (self.white_move and self.board[row][col][0] == "b") or (not self.white_move and self.board[row][col][0] == "w"):
+                        moves.append(Move((r, c), (row, col), self.board, self.move_log))
+                        break
+                    if (self.white_move and self.board[row][col][0] == "w") or (not self.white_move and self.board[row][col][0] == "b"):
+                        break
+                else:
+                    break
 
     def get_bishop_moves(self, r, c, moves):
-        # top right
-        row = r - 1
-        col = c + 1
-        while (row >= 0) and (col < len(self.board)):
-            if self.board[row][col] == "--":
-                moves.append(Move((r, c), (row, col), self.board, self.move_log))
-                row -= 1
-                col += 1
-                continue
-            if (self.white_move and self.board[row][col][0] == "b") or (not self.white_move and self.board[row][col][0] == "w"):
-                moves.append(Move((r, c), (row, col), self.board, self.move_log))
-                break
-            if (self.white_move and self.board[row][col][0] == "w") or (not self.white_move and self.board[row][col][0] == "b"):
-                break
-
-        # top left
-        row = r - 1
-        col = c - 1
-        while (row >= 0) and (col >= 0):
-            if self.board[row][col] == "--":
-                moves.append(Move((r, c), (row, col), self.board, self.move_log))
-                row -= 1
-                col -= 1
-                continue
-            if (self.white_move and self.board[row][col][0] == "b") or (not self.white_move and self.board[row][col][0] == "w"):
-                moves.append(Move((r, c), (row, col), self.board, self.move_log))
-                break
-            if (self.white_move and self.board[row][col][0] == "w") or (not self.white_move and self.board[row][col][0] == "b"):
-                break
-
-        # bottom left
-        row = r + 1
-        col = c - 1
-        while (row < len(self.board)) and (col >= 0):
-            if self.board[row][col] == "--":
-                moves.append(Move((r, c), (row, col), self.board, self.move_log))
-                row += 1
-                col -= 1
-                continue
-            if (self.white_move and self.board[row][col][0] == "b") or (not self.white_move and self.board[row][col][0] == "w"):
-                moves.append(Move((r, c), (row, col), self.board, self.move_log))
-                break
-            if (self.white_move and self.board[row][col][0] == "w") or (not self.white_move and self.board[row][col][0] == "b"):
-                break
-
-        # bottom right
-        row = r + 1
-        col = c + 1
-        while (row < len(self.board)) and (col < len(self.board[0])):
-            if self.board[row][col] == "--":
-                moves.append(Move((r, c), (row, col), self.board, self.move_log))
-                row += 1
-                col += 1
-                continue
-            if (self.white_move and self.board[row][col][0] == "b") or (not self.white_move and self.board[row][col][0] == "w"):
-                moves.append(Move((r, c), (row, col), self.board, self.move_log))
-                break
-            if (self.white_move and self.board[row][col][0] == "w") or (not self.white_move and self.board[row][col][0] == "b"):
-                break
+        directions = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
+        for d in directions:
+            for i in range(1, len(self.board)):
+                row = r + (d[0] * i)
+                col = c + (d[1] * i)
+                if (row in range(len(self.board))) and (col in range(len(self.board[0]))):
+                    if self.board[row][col] == "--":
+                        moves.append(Move((r, c), (row, col), self.board, self.move_log))
+                        continue
+                    if (self.white_move and self.board[row][col][0] == "b") or (not self.white_move and self.board[row][col][0] == "w"):
+                        moves.append(Move((r, c), (row, col), self.board, self.move_log))
+                        break
+                    if (self.white_move and self.board[row][col][0] == "w") or (not self.white_move and self.board[row][col][0] == "b"):
+                        break
+                else:
+                    break
 
     def get_knight_moves(self, r, c, moves):
         rows = [r - 2, r - 2, r + 2, r + 2, r - 1, r + 1, r - 1, r + 1]
