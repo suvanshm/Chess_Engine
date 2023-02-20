@@ -25,6 +25,9 @@ def main():
     clock = p.time.Clock()
     screen.fill(p.Color("white"))
     gs = ChessEngine.GameState()
+    valid_moves = gs.get_valid_moves()
+    print([x.get_notation() for x in valid_moves])
+    move_made = False
     load_images()
     running = True
     sq_selected = ()
@@ -46,15 +49,21 @@ def main():
                     sq_clicks.append(sq_selected)
                 if len(sq_clicks) == 2:
                     move = ChessEngine.Move(sq_clicks[0], sq_clicks[1], gs.board, gs.move_log)
-                    if move.get_notation():
-                        print(move.get_notation())
-                    gs.make_move(move)
+                    if move in valid_moves:
+                        gs.make_move(move)
+                        move_made = True
                     sq_clicks = []
                     sq_selected = ()
             # key handlers
             elif e.type == p.KEYDOWN:
                 if e.key == p.K_z:
                     gs.undo_move()
+                    move_made = True # we need to update the valid moves
+
+        if move_made:
+            valid_moves = gs.get_valid_moves()
+            print([x.get_notation() for x in valid_moves])
+            move_made = False
 
         draw_gamestate(screen, gs)
         clock.tick(MAX_FPS)
