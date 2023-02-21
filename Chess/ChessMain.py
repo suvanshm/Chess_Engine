@@ -48,7 +48,7 @@ def main():
                     sq_selected = (row, col)
                     sq_clicks.append(sq_selected)
                 if len(sq_clicks) == 2:
-                    move = ChessEngine.Move(sq_clicks[0], sq_clicks[1], gs.board, gs.move_log)
+                    move = ChessEngine.Move(sq_clicks[0], sq_clicks[1], gs)
                     if move in valid_moves:
                         gs.make_move(move)
                         move_made = True
