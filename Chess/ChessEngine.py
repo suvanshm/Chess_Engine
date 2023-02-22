@@ -29,7 +29,7 @@ class GameState:
         self.black_king_loc = (0, 4)
 
         self.checkmate = False
-        self.stalemate = True
+        self.stalemate = False
 
     def make_move(self, move, print_move=True):
         if self.board[move.start_row][move.start_col] != "--":  # checks if start_sq is empty
@@ -38,8 +38,14 @@ class GameState:
                     self.board[move.end_row][move.end_col] = "wQ"
                 else:
                     self.board[move.end_row][move.end_col] = "bQ"
+
+            elif move.enpassant():  # pawn moves onto empty square diagonally,
+                self.board[move.start_row][move.end_col] = "--"  # enpassant logic
+                self.board[move.end_row][move.end_col] = move.piece_moved
+
             else:
                 self.board[move.end_row][move.end_col] = move.piece_moved
+
             self.board[move.start_row][move.start_col] = "--"
 
             self.move_log.append(move)
@@ -59,7 +65,14 @@ class GameState:
         if len(self.move_log) != 0:
             move = self.move_log.pop()
             self.board[move.start_row][move.start_col] = move.piece_moved
-            self.board[move.end_row][move.end_col] = move.piece_captured
+
+            if move.enpassant():
+                self.board[move.start_row][move.end_col] = move.piece_captured
+                self.board[move.end_row][move.end_col] = "--"
+
+            else:
+                self.board[move.end_row][move.end_col] = move.piece_captured
+
             self.white_move = not self.white_move  # turn changes
             # updating king location
             if move.piece_moved == "wK":
@@ -75,6 +88,16 @@ class GameState:
             if self.check(check_color=turn):
                 moves.remove(moves[i])
             self.undo_move()
+        if len(moves) == 0:
+            if self.check(check_color=turn):
+                self.checkmate = True
+                print("Checkmate!")
+            else:
+                self.stalemate = True
+                print("Stalemate")
+        else:
+            self.checkmate = False
+            self.stalemate = False
         return moves
 
     def check(self, check_color):
@@ -140,7 +163,27 @@ class GameState:
                 self.move_functions[piece](r, c, moves)
         return moves
 
+    def enpassant_avl(self):
+        if len(self.move_log) > 0:
+            prev_move = self.move_log[-1]
+            if prev_move.piece_moved[1] == "P" and abs(prev_move.start_row - prev_move.end_row) == 2:  # checking if prev move was 2 sq pawn advance
+                if prev_move.end_row == r and abs(prev_move.end_col - c) == 1:
+                    if (r == 4 and prev_move.end_row == 4) or r == 5:
+                        return True
+        return None
+
     def get_pawn_moves(self, r, c, moves):
+
+        # checking if enpassant available
+        enpassant_available = False
+        prev_move = None
+        if len(self.move_log) > 0:
+            prev_move = self.move_log[-1]
+            if prev_move.piece_moved[1] == "P" and abs(prev_move.start_row - prev_move.end_row) == 2:  # checking if prev move was 2 sq pawn advance
+                if prev_move.end_row == r and abs(prev_move.end_col - c) == 1:
+                    if (r == 4 and prev_move.end_row == 4) or r == 5:
+                        enpassant_available = True
+
         if self.white_move:
             if self.board[r - 1][c] == "--":  # 1 square forward
                 moves.append(Move((r, c), (r - 1, c), self))
@@ -150,6 +193,12 @@ class GameState:
                 moves.append(Move((r, c), (r - 1, c - 1), self))
             if c < 7 and self.board[r - 1][c + 1][0] == "b":  # right capture
                 moves.append(Move((r, c), (r - 1, c + 1), self))
+            if enpassant_available:
+                if r == 3 and c > 0 and prev_move.end_col == c - 1:  # left enpassant
+                    moves.append(Move((r, c), (r - 1, c - 1), self))
+                if r == 3 and c < 7 and prev_move.end_col == c + 1:  # right enpassant
+                    moves.append(Move((r, c), (r - 1, c + 1), self))
+
 
         else:  # black pawns
             if self.board[r + 1][c] == "--":  # 1 square forward
@@ -160,6 +209,11 @@ class GameState:
                 moves.append(Move((r, c), (r + 1, c - 1), self))
             if c < 7 and self.board[r + 1][c + 1][0] == "w":  # right capture
                 moves.append(Move((r, c), (r + 1, c + 1), self))
+            if enpassant_available:
+                if r == 4 and c > 0 and prev_move.end_col == c - 1:  # left enpassant
+                    moves.append(Move((r, c), (r + 1, c - 1), self))
+                if r == 4 and c < 7 and prev_move.end_col == c + 1:  # right enpassant
+                    moves.append(Move((r, c), (r + 1, c + 1), self))
 
     def get_rook_moves(self, r, c, moves):
         directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
@@ -232,6 +286,11 @@ class Move:
         self.end_col = end_sq[1]
         self.piece_moved = self.gs.board[self.start_row][self.start_col]
         self.piece_captured = self.gs.board[self.end_row][self.end_col]
+        if self.enpassant():
+            if self.piece_moved[0] == "w":
+                self.piece_captured = "bP"
+            else:
+                self.piece_captured = "wP"
         self.move_ID = int(str(self.start_row) + str(self.start_col) + str(self.end_row) + str(self.end_col))
 
     def __eq__(self, other):
@@ -283,4 +342,12 @@ class Move:
         if self.piece_moved[1] == "P":
             if (self.piece_moved[0] == "w" and self.end_row == 0) or (self.piece_moved[0] == "b" and self.end_row == 7):
                 return True
+        return False
+
+    def enpassant(self):
+        if len(self.gs.move_log) > 0:
+            prev_move = self.gs.move_log[-1]
+            if prev_move.piece_moved[1] == "P" and abs(prev_move.start_row - prev_move.end_row) == 2:  # checking if prev move was 2 sq pawn advance
+                if self.start_row == prev_move.end_row and self.end_col == prev_move.end_col:
+                    return True
         return False
