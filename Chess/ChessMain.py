@@ -3,8 +3,9 @@ Driver file. Handles user input and displays game state.
 """
 
 import pygame as p
-from Chess import ChessEngine
+import ChessEngine
 
+OFFSET = 30
 WIDTH = HEIGHT = 512
 DIM = 8
 SQ_SIZE = HEIGHT // DIM
@@ -16,7 +17,11 @@ def load_images():
     """ initialize dictionary of images, called only once in main """
     pieces = ["bR", "bN", "bB", "bQ", "bK", "bP", "wR", "wN", "wB", "wQ", "wK", "wP"]
     for piece in pieces:
-        IMAGES[piece] = p.transform.scale(p.image.load("chess_images/" + piece + ".png"), (SQ_SIZE, SQ_SIZE))
+        # print current path 
+        path = "C:\\Users\\suvan\\ChessEngine\\Chess_Engine\\Chess\\chess_images\\"
+        # import images grom path using names of pieces
+        #IMAGES[piece] = p.transform.scale(p.image.load(path + piece + ".png"), (SQ_SIZE, SQ_SIZE))
+        IMAGES[piece] = p.transform.scale(p.image.load("Chess\\chess_images\\" + piece + ".png"), (SQ_SIZE, SQ_SIZE))
 
 
 def main():
