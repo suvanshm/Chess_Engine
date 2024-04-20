@@ -75,6 +75,13 @@ class GameState:
             if self.check(check_color=turn):
                 moves.remove(moves[i])
             self.undo_move()
+        if len(moves) == 0:
+            if self.check(check_color=turn):
+                self.checkmate = True
+                print("CHECKMATE")
+            else:
+                self.stalemate = True
+                print("STALEMATE")
         return moves
 
     def check(self, check_color):
@@ -98,7 +105,7 @@ class GameState:
                         break
                     elif self.board[row][col][1] in ["P", "B", "N"]:
                         break
-                    elif self.board[row][col][1] in ["R", "Q", "K"]:
+                    elif self.board[row][col][1] in ["R", "Q"]:
                         return True
                 else:
                     break
@@ -116,7 +123,7 @@ class GameState:
                         break
                     elif self.board[row][col][1] in ["R", "N"] or (self.board[row][col][1] == "P" and i > 1):
                         break
-                    elif (self.board[row][col][1] in ["Q", "B", "K"]) or (self.board[row][col][1] == "P" and i == 1):
+                    elif (self.board[row][col][1] in ["Q", "B"]) or (self.board[row][col][1] == "P" and i == 1):
                         return True
                 else:
                     break
