@@ -278,9 +278,12 @@ class Move:
             return output
         else:
             return None
-
+    
     def promotion(self):
-        if self.piece_moved[1] == "P":
-            if (self.piece_moved[0] == "w" and self.end_row == 0) or (self.piece_moved[0] == "b" and self.end_row == 7):
-                return True
+    # Promotion for white pawn
+        if self.piece_moved == "wP" and self.end_row == 0:
+            return True
+        # Promotion for black pawn
+        elif self.piece_moved == "bP" and self.end_row == 7:
+            return True
         return False
