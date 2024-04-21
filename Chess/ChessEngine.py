@@ -33,13 +33,21 @@ class GameState:
 
     def make_move(self, move, print_move=True):
         if self.board[move.start_row][move.start_col] != "--":  # checks if start_sq is empty
-            if move.promotion():
+            # edge case: promotion
+            if move.promotion:
                 if self.board[move.start_row][move.start_col][0] == "w":
                     self.board[move.end_row][move.end_col] = "wQ"
                 else:
                     self.board[move.end_row][move.end_col] = "bQ"
+
+            # edge case: en passant
+            elif move.enpassant:
+                self.board[move.start_row][move.end_col] = "--"
+                self.board[move.end_row][move.end_col] = move.piece_moved
+                
             else:
                 self.board[move.end_row][move.end_col] = move.piece_moved
+
             self.board[move.start_row][move.start_col] = "--"
 
             self.move_log.append(move)
@@ -59,8 +67,16 @@ class GameState:
         if len(self.move_log) != 0:
             move = self.move_log.pop()
             self.board[move.start_row][move.start_col] = move.piece_moved
-            self.board[move.end_row][move.end_col] = move.piece_captured
+
+            # en passant
+            if move.enpassant:
+                self.board[move.end_row][move.end_col] = "--"
+                self.board[move.start_row][move.end_col] = move.piece_captured
+            else:
+                self.board[move.end_row][move.end_col] = move.piece_captured
+
             self.white_move = not self.white_move  # turn changes
+
             # updating king location
             if move.piece_moved == "wK":
                 self.white_king_loc = (move.start_row, move.start_col)
@@ -72,11 +88,11 @@ class GameState:
         moves = self.get_all_moves()
         for i in range(len(moves) - 1, -1, -1):
             self.make_move(moves[i], print_move=False)
-            if self.check(check_color=turn):
+            if self.in_check(check_color=turn):
                 moves.remove(moves[i])
             self.undo_move()
         if len(moves) == 0:
-            if self.check(check_color=turn):
+            if self.in_check(check_color=turn):
                 self.checkmate = True
                 print("CHECKMATE")
             else:
@@ -84,7 +100,7 @@ class GameState:
                 print("STALEMATE")
         return moves
 
-    def check(self, check_color):
+    def in_check(self, check_color):
         if check_color == "w":
             r = self.white_king_loc[0]
             c = self.white_king_loc[1]
@@ -167,6 +183,15 @@ class GameState:
                 moves.append(Move((r, c), (r + 1, c - 1), self))
             if c < 7 and self.board[r + 1][c + 1][0] == "w":  # right capture
                 moves.append(Move((r, c), (r + 1, c + 1), self))
+        
+        # check if enpassant is possible or not 
+        if len(self.move_log) > 0: 
+            prev_move = self.move_log[-1] 
+            if prev_move.piece_moved[1] == "P" and abs(prev_move.start_row - prev_move.end_row) == 2: 
+                if r == prev_move.end_row and abs(c - prev_move.end_col) == 1: 
+                    # moves.append(Move((r, c), (r - 1  if self.white_move else r + 1, prev_move.end_col), self))
+                    en_passant_row = r - 1 if self.white_move else r + 1
+                    moves.append(Move((r, c), (en_passant_row, prev_move.end_col), self))
 
     def get_rook_moves(self, r, c, moves):
         directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
@@ -240,6 +265,8 @@ class Move:
         self.piece_moved = self.gs.board[self.start_row][self.start_col]
         self.piece_captured = self.gs.board[self.end_row][self.end_col]
         self.move_ID = int(str(self.start_row) + str(self.start_col) + str(self.end_row) + str(self.end_col))
+        self.promotion = self.piece_moved[1] == "P" and (self.end_row == 0 or self.end_row == 7)
+        self.enpassant = self.is_enpassant()
 
     def __eq__(self, other):
         if isinstance(other, Move):
@@ -270,6 +297,13 @@ class Move:
         # empty output
         output = ""
 
+        # en passant
+        if self.is_enpassant():
+            output = file_map[self.start_col] + "x" + square
+            if self.gs.in_check(check_color=check_color):
+                output += "+"
+            return output
+
         if self.piece_moved != "--":
             piece = piece_map[self.piece_moved[1]]
             if self.piece_captured == "--":
@@ -278,19 +312,18 @@ class Move:
                 if self.piece_moved[1] == "P":
                     piece = file_map[self.start_col]
                 output = piece + "x" + square
-            if self.promotion():
+            if self.promotion:
                 output += "=Q"
-            if self.gs.check(check_color=check_color):
+            if self.gs.in_check(check_color=check_color):
                 output += "+"
             return output
         else:
             return None
-    
-    def promotion(self):
-    # Promotion for white pawn
-        if self.piece_moved == "wP" and self.end_row == 0:
+        
+    def is_enpassant(self): 
+        # classify move as ep if pawn moves diagonally without capturing anything 
+        # conditions for ep already checked in get_pawn_moves, only way we get a diagonal move without capturing is if it's an ep
+        if self.piece_moved[1] == "P" and abs(self.end_col-self.start_col)==1 and self.piece_captured == "--": 
+            self.piece_captured = "bP" if self.piece_moved[0] == "w" else "wP"
             return True
-        # Promotion for black pawn
-        elif self.piece_moved == "bP" and self.end_row == 7:
-            return True
-        return False
+
