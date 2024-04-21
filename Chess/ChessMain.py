@@ -51,12 +51,13 @@ def main():
                     sq_clicks.append(sq_selected)
                 if len(sq_clicks) == 2:
                     move = ChessEngine.Move(sq_clicks[0], sq_clicks[1], gs)
-                    if move in valid_moves:
-                        gs.make_move(move)
-                        move_made = True
-                        sq_clicks = []
-                        sq_selected = ()
-                    else:
+                    for i in range(len(valid_moves)):
+                        if move == valid_moves[i]:
+                            gs.make_move(valid_moves[i])
+                            move_made = True
+                            sq_clicks = []
+                            sq_selected = ()
+                    if not move_made:
                         sq_clicks = [sq_selected]
             # key handlers
             elif e.type == p.KEYDOWN:

@@ -31,10 +31,32 @@ class GameState:
         self.checkmate = False
         self.stalemate = True
 
+
     def make_move(self, move, print_move=True):
         if self.board[move.start_row][move.start_col] != "--":  # checks if start_sq is empty
+            # edge case: castling
+            if move.castle:
+                if move.castle_type == "short": 
+                    if self.white_move: 
+                        self.board[7][5] = "wR"
+                        self.board[7][7] = "--"
+
+                    if not self.white_move: 
+                        self.board[0][5] = "bR"
+                        self.board[0][7] = "--"
+
+                if move.castle_type == "long": 
+                    if self.white_move: 
+                        self.board[7][3] = "wR"
+                        self.board[7][0] = "--"
+
+                    if not self.white_move: 
+                        self.board[0][3] = "bR"
+                        self.board[0][0] = "--"
+
+                self.board[move.end_row][move.end_col] = move.piece_moved
             # edge case: promotion
-            if move.promotion:
+            elif move.promotion:
                 if self.board[move.start_row][move.start_col][0] == "w":
                     self.board[move.end_row][move.end_col] = "wQ"
                 else:
@@ -67,6 +89,7 @@ class GameState:
         if len(self.move_log) != 0:
             move = self.move_log.pop()
             self.board[move.start_row][move.start_col] = move.piece_moved
+            self.white_move = not self.white_move  # turn changes
 
             # en passant
             if move.enpassant:
@@ -74,8 +97,26 @@ class GameState:
                 self.board[move.start_row][move.end_col] = move.piece_captured
             else:
                 self.board[move.end_row][move.end_col] = move.piece_captured
+            
+            # castling
+            if move.castle:
+                if move.castle_type == "short": 
+                    if self.white_move: 
+                        self.board[7][7] = "wR"
+                        self.board[7][5] = "--"
 
-            self.white_move = not self.white_move  # turn changes
+                    if not self.white_move: 
+                        self.board[0][7] = "bR"
+                        self.board[0][5] = "--"
+
+                if move.castle_type == "long": 
+                    if self.white_move: 
+                        self.board[7][0] = "wR"
+                        self.board[7][3] = "--"
+
+                    if not self.white_move: 
+                        self.board[0][0] = "bR"
+                        self.board[0][3] = "--"
 
             # updating king location
             if move.piece_moved == "wK":
@@ -91,6 +132,7 @@ class GameState:
             if self.in_check(check_color=turn):
                 moves.remove(moves[i])
             self.undo_move()
+            
         if len(moves) == 0:
             if self.in_check(check_color=turn):
                 self.checkmate = True
@@ -100,13 +142,17 @@ class GameState:
                 print("STALEMATE")
         return moves
 
-    def in_check(self, check_color):
-        if check_color == "w":
-            r = self.white_king_loc[0]
-            c = self.white_king_loc[1]
-        else:
-            r = self.black_king_loc[0]
-            c = self.black_king_loc[1]
+    def in_check(self, check_color, r=None, c=None):
+        if r is None and c is None:
+            if check_color == "w":
+                r = self.white_king_loc[0]
+                c = self.white_king_loc[1]
+            else:
+                r = self.black_king_loc[0]
+                c = self.black_king_loc[1]
+        else: 
+            r = r
+            c = c
 
         # orthogonal checks
         directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
@@ -248,10 +294,61 @@ class GameState:
                     moves.append(Move((r, c), (row, col), self))
                 if (self.white_move and self.board[row][col][0] == "b") or (not self.white_move and self.board[row][col][0] == "w"):
                     moves.append(Move((r, c), (row, col), self))
+        
+        # check for castling
+        turn = "w" if self.white_move else "b"
+        possible_castles = self.can_castle(turn)
+        if possible_castles['short']: 
+            print("SHORT CASTLE")
+            if turn == "w": 
+                print("WHITE SHORT CASTLE")
+                moves.append(Move(self.white_king_loc, (7, 6), self))
+            if turn == "b": moves.append(Move(self.black_king_loc, (0, 6), self))
+        if possible_castles['long']:
+            if turn == "w": moves.append(Move(self.white_king_loc, (7, 2), self))
+            if turn == "b": moves.append(Move(self.black_king_loc, (0, 2), self))
 
     def get_queen_moves(self, r, c, moves):
         self.get_rook_moves(r, c, moves)
         self.get_bishop_moves(r, c, moves)
+    
+    # Castling methods 
+    def can_castle(self, color):
+        result = {'short': False, 'long': False}
+        # if in check, return false
+        if self.in_check(color): return result 
+        king = self.white_king_loc if color == "w" else self.black_king_loc
+        # if king has moved, return false
+        if self.has_moved(king): return result
+        rooks = self.get_rook_locations(color)
+        for rook in rooks:
+            if self.has_moved(rook): continue # if rook moved, that side remains false
+            if self.is_path_clear(king, rook, color): 
+                if rook[1] == 0: 
+                    result['long'] = True
+                if rook[1] == 7: 
+                    result['short'] = True
+        print(result)
+        return result
+    
+    def has_moved(self, loc):
+        for move in self.move_log:
+            if move.start_row == loc[0] and move.start_col == loc[1]: return True
+        return False
+    
+    def get_rook_locations(self, color):
+        rooks = []
+        for r, c in np.ndindex(np.shape(self.board)):
+            if self.board[r][c][0] == color and self.board[r][c][1] == "R":
+                rooks.append((r, c))
+        return rooks
+    
+    def is_path_clear(self, start, end, color):
+        direction = 1 if end[1] > start[1] else -1
+        for i in range(start[1] + direction, end[1], direction):
+            if self.board[start[0]][i] != "--": return False
+            if self.in_check(color, start[0], i): return False
+        return True
 
 
 class Move:
@@ -267,6 +364,9 @@ class Move:
         self.move_ID = int(str(self.start_row) + str(self.start_col) + str(self.end_row) + str(self.end_col))
         self.promotion = self.piece_moved[1] == "P" and (self.end_row == 0 or self.end_row == 7)
         self.enpassant = self.is_enpassant()
+        self.castle = self.is_castle() 
+        if self.castle: 
+            self.castle_type = "short" if self.end_col == 6 else "long"
 
     def __eq__(self, other):
         if isinstance(other, Move):
@@ -277,6 +377,10 @@ class Move:
         """
         outputs out notation for each move. ADD CASTLING, DISAMBIGUATION, CHECK, CHECKMATE, STALEMATE.
         """
+        # castling 
+        if self.castle: 
+            return "O-O" if self.castle_type == "short" else "O-O-O" 
+        
         board_row = board_col = np.arange(8)
         letters = string.ascii_lowercase[:8]
         numbers = reversed([str(x) for x in np.arange(9)[1:]])
@@ -326,4 +430,11 @@ class Move:
         if self.piece_moved[1] == "P" and abs(self.end_col-self.start_col)==1 and self.piece_captured == "--": 
             self.piece_captured = "bP" if self.piece_moved[0] == "w" else "wP"
             return True
+    
+    def is_castle(self): 
+        # classify move as castling if king moves 2 squares to the left or right
+        # conditions for castling already checked in get_king_moves, only way we get a move of 2 squares is if it's a castle
+        if self.piece_moved[1] == "K" and abs(self.end_col - self.start_col) == 2: 
+            return True
+        return False
 
