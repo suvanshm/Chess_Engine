@@ -30,6 +30,7 @@ def main():
     valid_moves = gs.get_valid_moves()
     print([x.get_notation() for x in valid_moves])
     move_made = False
+    animate = False 
     load_images()
     running = True
     sq_selected = ()
@@ -55,6 +56,7 @@ def main():
                         if move == valid_moves[i]:
                             gs.make_move(valid_moves[i])
                             move_made = True
+                            animate = True
                             sq_clicks = []
                             sq_selected = ()
                     if not move_made:
@@ -64,19 +66,31 @@ def main():
                 if e.key == p.K_z:
                     gs.undo_move()
                     move_made = True # we need to update the valid moves
+                    animate = False
+                if e.key == p.K_r:
+                    gs = ChessEngine.GameState()
+                    valid_moves = gs.get_valid_moves()
+                    sq_selected = ()
+                    sq_clicks = []
+                    move_made = False
+                    animate = False
 
         if move_made:
+            if animate:
+                animate_move(gs.move_log[-1], screen, gs.board, clock)
             valid_moves = gs.get_valid_moves()
             print([x.get_notation() for x in valid_moves])
             move_made = False
 
-        draw_gamestate(screen, gs)
+        draw_gamestate(screen, gs, sq_selected, valid_moves)
         clock.tick(MAX_FPS)
         p.display.flip()
 
 
-def draw_gamestate(screen, gs):
+def draw_gamestate(screen, gs, sq_selected, valid_moves):
     draw_board(screen)
+    highlight_last_move(screen, gs)
+    highlight_avl_moves(screen, gs, sq_selected, valid_moves)
     draw_pieces(screen, gs.board)
 
 
@@ -94,6 +108,52 @@ def draw_pieces(screen, board):
             piece = board[r][c]
             if piece != "--":  # not empty
                 screen.blit(IMAGES[piece], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+def highlight_avl_moves(screen, gs, sq_selected, valid_moves):
+    if sq_selected != ():
+        r, c = sq_selected
+        if gs.board[r][c][0] == ("w" if gs.white_move else "b"):
+            s = p.Surface((SQ_SIZE, SQ_SIZE))
+            s.set_alpha(50)  # transparency value
+            s.fill(p.Color("red"))
+            screen.blit(s, (c * SQ_SIZE, r * SQ_SIZE))
+            s.fill(p.Color("green"))
+            for move in valid_moves:
+                if move.start_row == r and move.start_col == c:
+                    screen.blit(s, (move.end_col * SQ_SIZE, move.end_row * SQ_SIZE))
+
+
+def highlight_last_move(screen, gs):
+    if len(gs.move_log) != 0:
+        move = gs.move_log[-1]
+        s = p.Surface((SQ_SIZE, SQ_SIZE))
+        s.set_alpha(50)
+        s.fill(p.Color("blue"))
+        screen.blit(s, (move.start_col * SQ_SIZE, move.start_row * SQ_SIZE))
+        screen.blit(s, (move.end_col * SQ_SIZE, move.end_row * SQ_SIZE))
+
+def animate_move(move, screen, board, clock):
+    delta_x = move.end_col - move.start_col
+    delta_y = move.end_row - move.start_row
+    frames_per_square = 5  # frames to move one square
+    frame_count = max(abs(delta_x), abs(delta_y)) * frames_per_square
+
+    for frame in range(frame_count + 1):
+        r, c = (move.start_row + delta_y * frame / frame_count, 
+                move.start_col + delta_x * frame / frame_count)
+        draw_board(screen)
+        draw_pieces(screen, board)
+        # erase the piece moved from its ending square
+        color = 'white' if (move.end_row + move.end_col) % 2 == 0 else 'gray'
+        end_square = p.Rect(move.end_col * SQ_SIZE, move.end_row * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+        p.draw.rect(screen, color, end_square)
+        # draw captured piece onto rectangle
+        if move.piece_captured != '--':
+            screen.blit(IMAGES[move.piece_captured], end_square)
+        # draw moving piece
+        screen.blit(IMAGES[move.piece_moved], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+        p.display.flip()
+        clock.tick(MAX_FPS)
 
 
 if __name__ == '__main__':
