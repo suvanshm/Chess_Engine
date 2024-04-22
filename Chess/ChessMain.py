@@ -35,38 +35,48 @@ def main():
     running = True
     sq_selected = ()
     sq_clicks = []
+    game_over = False 
+
     while running:
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
             # mouse handlers
             elif e.type == p.MOUSEBUTTONDOWN:
-                location = p.mouse.get_pos()
-                col = location[0] // SQ_SIZE
-                row = location[1] // SQ_SIZE
-                if sq_selected == (row, col):
-                    sq_selected = ()
-                    sq_clicks = []
-                else:
-                    sq_selected = (row, col)
-                    sq_clicks.append(sq_selected)
-                if len(sq_clicks) == 2:
-                    move = ChessEngine.Move(sq_clicks[0], sq_clicks[1], gs)
-                    for i in range(len(valid_moves)):
-                        if move == valid_moves[i]:
-                            gs.make_move(valid_moves[i])
-                            move_made = True
-                            animate = True
-                            sq_clicks = []
-                            sq_selected = ()
-                    if not move_made:
-                        sq_clicks = [sq_selected]
+                if not game_over: 
+                    location = p.mouse.get_pos()
+                    col = location[0] // SQ_SIZE
+                    row = location[1] // SQ_SIZE
+                    if sq_selected == (row, col):
+                        sq_selected = ()
+                        sq_clicks = []
+                    else:
+                        sq_selected = (row, col)
+                        sq_clicks.append(sq_selected)
+                    if len(sq_clicks) == 2:
+                        move = ChessEngine.Move(sq_clicks[0], sq_clicks[1], gs)
+                        for i in range(len(valid_moves)):
+                            if move == valid_moves[i]:
+                                gs.make_move(valid_moves[i])
+                                move_made = True
+                                animate = True
+                                sq_clicks = []
+                                sq_selected = ()
+                        if not move_made:
+                            sq_clicks = [sq_selected]
             # key handlers
             elif e.type == p.KEYDOWN:
                 if e.key == p.K_z:
                     gs.undo_move()
                     move_made = True # we need to update the valid moves
                     animate = False
+                    game_over = False
+                    gs.checkmate = False
+                    gs.stalemate = False
+                    gs.insufficient_material = False
+                    gs.threefold_repetition = False
+
+
                 if e.key == p.K_r:
                     gs = ChessEngine.GameState()
                     valid_moves = gs.get_valid_moves()
@@ -74,6 +84,7 @@ def main():
                     sq_clicks = []
                     move_made = False
                     animate = False
+                    game_over = False
 
         if move_made:
             if animate:
@@ -83,6 +94,23 @@ def main():
             move_made = False
 
         draw_gamestate(screen, gs, sq_selected, valid_moves)
+
+        if gs.checkmate: 
+            game_over = True
+            if gs.white_move:
+                draw_text(screen, 'checkmate! black wins')
+            else:
+                draw_text(screen, 'checkmate! white wins')
+        elif gs.stalemate:
+            game_over = True
+            draw_text(screen, 'draw: stalemate')
+        elif gs.insufficient_material:
+            game_over = True
+            draw_text(screen, 'draw: insufficient material')
+        elif gs.threefold_repetition:
+            game_over = True
+            draw_text(screen, 'draw: threefold repetition')
+        
         clock.tick(MAX_FPS)
         p.display.flip()
 
@@ -154,6 +182,13 @@ def animate_move(move, screen, board, clock):
         screen.blit(IMAGES[move.piece_moved], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
         p.display.flip()
         clock.tick(MAX_FPS)
+
+def draw_text(screen, text):
+    font = p.font.SysFont('Courier', 32, True, False)
+    text_object = font.render(text, 0, p.Color('Black'))
+    # center the text
+    text_location = p.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH / 2 - text_object.get_width() / 2, HEIGHT / 2 - text_object.get_height() / 2)
+    screen.blit(text_object, text_location)
 
 
 if __name__ == '__main__':

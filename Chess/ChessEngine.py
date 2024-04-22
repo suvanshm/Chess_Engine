@@ -29,7 +29,9 @@ class GameState:
         self.black_king_loc = (0, 4)
 
         self.checkmate = False
-        self.stalemate = True
+        self.stalemate = False
+        self.insufficient_material = False
+        self.threefold_repetition = False
 
 
     def make_move(self, move, print_move=True):
