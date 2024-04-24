@@ -4,7 +4,7 @@ Stores game state, valid moves, and move log.
 
 import numpy as np
 import string
-
+import hashlib
 
 class GameState:
     def __init__(self):
@@ -96,12 +96,6 @@ class GameState:
             move = self.move_log.pop()
             self.board[move.start_row][move.start_col] = move.piece_moved
             self.white_move = not self.white_move  # turn changes
-
-            board_string = self.board.tostring().decode('utf-8')
-            if board_string in self.board_history:
-                self.board_history[board_string] -= 1
-                if self.board_history[board_string] == 0:
-                    del self.board_history[board_string]
 
             # en passant
             if move.enpassant:
@@ -405,12 +399,27 @@ class GameState:
         return any(value >= 3 for value in self.board_history.values())
     
     def update_board_history(self):
-        board_string = self.board.tostring().decode('utf-8')
+        raw_board_string = self.board.tostring().decode('utf-8')
+        board_string = hashlib.md5(raw_board_string.encode()).hexdigest()
+        print(board_string)
         if board_string in self.board_history:
             self.board_history[board_string] += 1
+            print(self.board_history[board_string], ":", board_string)
         else:
+            print("NEW: ", board_string)
             self.board_history[board_string] = 1
     
+    def undo_board_history(self): 
+        raw_board_string = self.board.tostring().decode('utf-8')
+        board_string = hashlib.md5(raw_board_string.encode()).hexdigest()
+        #print("undoing move: ", board_string)
+        if board_string in self.board_history:
+            print("inside loop")
+            self.board_history[board_string] -= 1
+            print(self.board_history[board_string], ":", board_string)
+            if self.board_history[board_string] == 0:
+                print("DELETING: ", board_string)
+                del self.board_history[board_string]
 
 
         

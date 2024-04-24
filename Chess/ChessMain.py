@@ -69,6 +69,7 @@ def main():
             elif e.type == p.KEYDOWN:
                 if e.key == p.K_z:
                     undo = True
+                    gs.undo_board_history()
                     gs.undo_move()
                     move_made = True # we need to update the valid moves
                     animate = False
