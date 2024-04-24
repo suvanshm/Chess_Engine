@@ -4,6 +4,7 @@ Driver file. Handles user input and displays game state.
 
 import pygame as p
 import ChessEngine
+import MoveFinder
 
 WIDTH = HEIGHT = 512
 DIM = 8
@@ -37,14 +38,17 @@ def main():
     sq_clicks = []
     game_over = False
     undo = False
+    human_white = False # if a human is playing as white
+    human_black = False
 
     while running:
+        human_turn = (gs.white_move and human_white) or (not gs.white_move and human_black)
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
             # mouse handlers
             elif e.type == p.MOUSEBUTTONDOWN:
-                if not game_over: 
+                if not game_over and human_turn: 
                     location = p.mouse.get_pos()
                     col = location[0] // SQ_SIZE
                     row = location[1] // SQ_SIZE
@@ -89,6 +93,15 @@ def main():
                     animate = False
                     game_over = False
 
+        
+        # AI Move Finder Logic 
+        if not game_over and not human_turn:
+            AIMove = MoveFinder.find_random_move(valid_moves)
+            gs.make_move(AIMove)
+            move_made = True
+            animate = True
+
+        
         if move_made:
             if animate:
                 animate_move(gs.move_log[-1], screen, gs.board, clock)
