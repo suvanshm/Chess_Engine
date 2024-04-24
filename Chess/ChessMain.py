@@ -91,6 +91,9 @@ def main():
                 animate_move(gs.move_log[-1], screen, gs.board, clock)
             valid_moves = gs.get_valid_moves()
             print([x.get_notation() for x in valid_moves])
+            gs.update_board_history()
+            gs.threefold_repetition = gs.is_threefold_repetition()
+            gs.insufficient_material = gs.is_insufficient_material()
             move_made = False
 
         draw_gamestate(screen, gs, sq_selected, valid_moves)

@@ -18,6 +18,8 @@ class GameState:
             ["--" for _ in range(8)],
             ["wP" for _ in range(8)],
             ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]])
+        
+        self.board_history = {} # store board states for threefold repetition check
 
         self.white_move = True  # white's turn to move at first
         self.move_log = []
@@ -75,6 +77,8 @@ class GameState:
             self.board[move.start_row][move.start_col] = "--"
 
             self.move_log.append(move)
+            #self.update_board_history()
+            #self.threefold_repetition = self.is_threefold_repetition()
 
             self.white_move = not self.white_move  # turn changes
 
@@ -92,6 +96,12 @@ class GameState:
             move = self.move_log.pop()
             self.board[move.start_row][move.start_col] = move.piece_moved
             self.white_move = not self.white_move  # turn changes
+
+            board_string = self.board.tostring().decode('utf-8')
+            if board_string in self.board_history:
+                self.board_history[board_string] -= 1
+                if self.board_history[board_string] == 0:
+                    del self.board_history[board_string]
 
             # en passant
             if move.enpassant:
@@ -125,6 +135,8 @@ class GameState:
                 self.white_king_loc = (move.start_row, move.start_col)
             elif move.piece_moved == "bK":
                 self.black_king_loc = (move.start_row, move.start_col)
+            
+            self.threefold_repetition = self.is_threefold_repetition()
 
     def get_valid_moves(self):
         turn = "w" if self.white_move else "b"
@@ -330,7 +342,6 @@ class GameState:
                     result['long'] = True
                 if rook[1] == 7: 
                     result['short'] = True
-        print(result)
         return result
     
     def has_moved(self, loc):
@@ -351,6 +362,60 @@ class GameState:
             if self.board[start[0]][i] != "--": return False
             if self.in_check(color, start[0], i): return False
         return True
+    
+    # checking for forced draw conditions
+    def is_insufficient_material(self):
+        w_pieces = []
+        b_pieces = []
+
+        for r,c in np.ndindex(np.shape(self.board)):
+            if self.board[r][c] != "--" and self.board[r][c][1] != "K":
+                if self.board[r][c][1] in ["Q", "R", "P"]: return False 
+                if self.board[r][c][0] == "w":
+                    w_pieces.append((self.board[r][c], (r,c)))
+                else:
+                    b_pieces.append((self.board[r][c], (r,c)))
+
+        # at the minimum having any 2 pieces on the board means it's not insufficient material
+        if len(w_pieces) > 1 or len(b_pieces) > 1: return False
+
+        if len(w_pieces) == 0: 
+            if len(b_pieces) == 0: return True # lone kings 
+            if b_pieces[0][0][1] in ["N", "B"]: return True # king and knight or king and bishop
+            return False
+
+        if len(b_pieces) == 0:
+            if w_pieces[0][0][1] in ["N", "B"]: return True
+            return False
+
+        # king and knight vs king and knight 
+        if len(w_pieces) == 1 and w_pieces[0][0][1] == "N" and len(b_pieces) == 1 and b_pieces[0][0][1] == "N": return True
+
+        # same color bishops
+        if len(w_pieces) == 1 and w_pieces[0][0][1] == "B" and len(b_pieces) == 1 and b_pieces[0][0][1] == "B": 
+            # check for square color of both bishops 
+            w_sq = (w_pieces[0][1][0] + w_pieces[0][1][1]) % 2
+            b_sq = (b_pieces[0][1][0] + b_pieces[0][1][1]) % 2
+            return w_sq == b_sq
+
+        return False
+    
+    def is_threefold_repetition(self):
+        # check if the current board state has been repeated 3 times
+        return any(value >= 3 for value in self.board_history.values())
+    
+    def update_board_history(self):
+        board_string = self.board.tostring().decode('utf-8')
+        if board_string in self.board_history:
+            self.board_history[board_string] += 1
+        else:
+            self.board_history[board_string] = 1
+    
+
+
+        
+    
+
 
 
 class Move:
