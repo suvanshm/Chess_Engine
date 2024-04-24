@@ -35,7 +35,8 @@ def main():
     running = True
     sq_selected = ()
     sq_clicks = []
-    game_over = False 
+    game_over = False
+    undo = False
 
     while running:
         for e in p.event.get():
@@ -67,6 +68,7 @@ def main():
             # key handlers
             elif e.type == p.KEYDOWN:
                 if e.key == p.K_z:
+                    undo = True
                     gs.undo_move()
                     move_made = True # we need to update the valid moves
                     animate = False
@@ -91,8 +93,10 @@ def main():
                 animate_move(gs.move_log[-1], screen, gs.board, clock)
             valid_moves = gs.get_valid_moves()
             print([x.get_notation() for x in valid_moves])
-            gs.update_board_history()
-            gs.threefold_repetition = gs.is_threefold_repetition()
+            if undo == False: 
+                gs.update_board_history()
+                gs.threefold_repetition = gs.is_threefold_repetition()
+            undo = False
             gs.insufficient_material = gs.is_insufficient_material()
             move_made = False
 

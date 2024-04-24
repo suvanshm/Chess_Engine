@@ -136,7 +136,7 @@ class GameState:
             elif move.piece_moved == "bK":
                 self.black_king_loc = (move.start_row, move.start_col)
             
-            self.threefold_repetition = self.is_threefold_repetition()
+            self.threefold_repetition = False
 
     def get_valid_moves(self):
         turn = "w" if self.white_move else "b"
