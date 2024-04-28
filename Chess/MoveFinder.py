@@ -31,24 +31,6 @@ def negamax_helper(gs, valid_moves):
     print("number of evaluations: " + str(num_evaluations))
     return best_move
 
-def negamax(gs, valid_moves, depth, color):
-    global best_move
-    if depth == 0 or gs.checkmate or gs.stalemate or gs.threefold_repetition or gs.insufficient_material:
-        return color * evaluate_board(gs)
-
-    max_eval = -checkmate_score
-    for move in valid_moves:
-        gs.make_move(move, print_move=False)
-        next_moves = gs.get_valid_moves()
-        eval = -negamax(gs, next_moves, depth-1, -color)
-        if eval > max_eval:
-            max_eval = eval
-            if depth == DEPTH:
-                best_move = move
-                print("best move is: " + best_move.get_notation())
-        gs.undo_move()
-    return max_eval
-
 
 def negamax_alphabeta(gs, valid_moves, depth, alpha, beta, color):
     global best_move
@@ -71,6 +53,24 @@ def negamax_alphabeta(gs, valid_moves, depth, alpha, beta, color):
             alpha = max_eval
         if alpha >= beta:
             break
+    return max_eval
+
+def negamax(gs, valid_moves, depth, color):
+    global best_move
+    if depth == 0 or gs.checkmate or gs.stalemate or gs.threefold_repetition or gs.insufficient_material:
+        return color * evaluate_board(gs)
+
+    max_eval = -checkmate_score
+    for move in valid_moves:
+        gs.make_move(move, print_move=False)
+        next_moves = gs.get_valid_moves()
+        eval = -negamax(gs, next_moves, depth-1, -color)
+        if eval > max_eval:
+            max_eval = eval
+            if depth == DEPTH:
+                best_move = move
+                print("best move is: " + best_move.get_notation())
+        gs.undo_move()
     return max_eval
 
 def minmax_helper(gs, valid_moves): 
