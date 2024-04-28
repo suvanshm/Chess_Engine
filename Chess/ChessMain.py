@@ -39,7 +39,7 @@ def main():
     game_over = False
     undo = False
     human_white = False # if a human is playing as white
-    human_black = False
+    human_black = True # if a human is playing as black
 
     while running:
         human_turn = (gs.white_move and human_white) or (not gs.white_move and human_black)
@@ -96,7 +96,11 @@ def main():
         
         # AI Move Finder Logic 
         if not game_over and not human_turn:
-            AIMove = MoveFinder.find_random_move(valid_moves)
+            AIMove = MoveFinder.negamax_helper(gs, valid_moves)
+            #AIMove = MoveFinder.minmax_helper(gs, valid_moves)
+            if AIMove is None:
+                print('no move found by engine')
+                AIMove = MoveFinder.find_random_move(valid_moves)
             gs.make_move(AIMove)
             move_made = True
             animate = True
@@ -144,7 +148,8 @@ def draw_gamestate(screen, gs, sq_selected, valid_moves):
 
 
 def draw_board(screen):
-    colors = [p.Color("white"), p.Color("gray")]
+    #colors = [p.Color("white"), p.Color("gray")]
+    colors = [(241, 217, 192), (169, 121, 101)] # light and dark brown
     for r in range(DIM):
         for c in range(DIM):
             color = colors[(r + c) % 2]
@@ -193,7 +198,8 @@ def animate_move(move, screen, board, clock):
         draw_board(screen)
         draw_pieces(screen, board)
         # erase the piece moved from its ending square
-        color = 'white' if (move.end_row + move.end_col) % 2 == 0 else 'gray'
+        # color = 'white' if (move.end_row + move.end_col) % 2 == 0 else 'gray'
+        color = (241, 217, 192) if (move.end_row + move.end_col) % 2 == 0 else (169, 121, 101) # light and dark brown 
         end_square = p.Rect(move.end_col * SQ_SIZE, move.end_row * SQ_SIZE, SQ_SIZE, SQ_SIZE)
         p.draw.rect(screen, color, end_square)
         # draw captured piece onto rectangle
