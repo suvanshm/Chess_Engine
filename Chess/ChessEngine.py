@@ -132,6 +132,9 @@ class GameState:
                 self.black_king_loc = (move.start_row, move.start_col)
             
             self.threefold_repetition = False
+            self.checkmate = False
+            self.stalemate = False
+            self.insufficient_material = False
 
     def get_valid_moves(self):
         turn = "w" if self.white_move else "b"
@@ -152,6 +155,13 @@ class GameState:
         return moves
 
     def in_check(self, check_color, r=None, c=None):
+        if check_color == "w":
+            enemy_r = self.black_king_loc[0]
+            enemy_c = self.black_king_loc[1]
+        else:
+            enemy_r = self.white_king_loc[0]
+            enemy_c = self.white_king_loc[1]
+
         if r is None and c is None:
             if check_color == "w":
                 r = self.white_king_loc[0]
@@ -162,6 +172,10 @@ class GameState:
         else: 
             r = r
             c = c
+        
+        # adjacent kings (not technically a check but important to filter from legal moves)
+        if abs(r - enemy_r) <= 1 and abs(c - enemy_c) <= 1:
+            return True
 
         # orthogonal checks
         directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
@@ -324,11 +338,11 @@ class GameState:
     # Castling methods 
     def can_castle(self, color):
         result = {'short': False, 'long': False}
+        # if king has moved, return false
+        king = self.white_king_loc if color == "w" else self.black_king_loc
+        if self.has_moved(king): return result
         # if in check, return false
         if self.in_check(color): return result 
-        king = self.white_king_loc if color == "w" else self.black_king_loc
-        # if king has moved, return false
-        if self.has_moved(king): return result
         rooks = self.get_rook_locations(color)
         for rook in rooks:
             if self.has_moved(rook): continue # if rook moved, that side remains false
