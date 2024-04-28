@@ -36,6 +36,7 @@ class GameState:
         self.threefold_repetition = False
 
 
+
     def make_move(self, move, print_move=True):
         if self.board[move.start_row][move.start_col] != "--":  # checks if start_sq is empty
             # edge case: castling
@@ -307,9 +308,9 @@ class GameState:
         turn = "w" if self.white_move else "b"
         possible_castles = self.can_castle(turn)
         if possible_castles['short']: 
-            print("SHORT CASTLE")
+            #print("SHORT CASTLE")
             if turn == "w": 
-                print("WHITE SHORT CASTLE")
+                #print("WHITE SHORT CASTLE")
                 moves.append(Move(self.white_king_loc, (7, 6), self))
             if turn == "b": moves.append(Move(self.black_king_loc, (0, 6), self))
         if possible_castles['long']:
@@ -401,12 +402,12 @@ class GameState:
     def update_board_history(self):
         raw_board_string = self.board.tostring().decode('utf-8')
         board_string = hashlib.md5(raw_board_string.encode()).hexdigest()
-        print(board_string)
+        #print(board_string)
         if board_string in self.board_history:
             self.board_history[board_string] += 1
             print(self.board_history[board_string], ":", board_string)
         else:
-            print("NEW: ", board_string)
+            #print("NEW: ", board_string)
             self.board_history[board_string] = 1
     
     def undo_board_history(self): 
@@ -414,11 +415,11 @@ class GameState:
         board_string = hashlib.md5(raw_board_string.encode()).hexdigest()
         #print("undoing move: ", board_string)
         if board_string in self.board_history:
-            print("inside loop")
+            #print("inside loop")
             self.board_history[board_string] -= 1
             print(self.board_history[board_string], ":", board_string)
             if self.board_history[board_string] == 0:
-                print("DELETING: ", board_string)
+                #print("DELETING: ", board_string)
                 del self.board_history[board_string]
 
 
