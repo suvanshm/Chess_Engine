@@ -5,6 +5,7 @@ Driver file. Handles user input and displays game state.
 import pygame as p
 import ChessEngine
 import MoveFinder
+from multiprocessing import Process, Queue
 
 WIDTH = HEIGHT = 512
 RIGHT_OFFSET = 250
@@ -41,8 +42,10 @@ def main():
     sq_clicks = []
     game_over = False
     undo = False
-    human_white = True # if a human is playing as white
+    human_white = False # if a human is playing as white
     human_black = True # if a human is playing as black
+    movefinder_process = None
+    AIThinking = False
 
     while running:
         human_turn = (gs.white_move and human_white) or (not gs.white_move and human_black)
@@ -85,6 +88,10 @@ def main():
                     gs.stalemate = False
                     gs.insufficient_material = False
                     gs.threefold_repetition = False
+                    if AIThinking: 
+                        movefinder_process.terminate()
+                        AIThinking = False
+                        human_turn = True
 
 
                 if e.key == p.K_r:
@@ -95,18 +102,31 @@ def main():
                     move_made = False
                     animate = False
                     game_over = False
+                    if AIThinking: 
+                        movefinder_process.terminate()
+                        AIThinking = False
 
         
         # AI Move Finder Logic 
         if not game_over and not human_turn:
-            AIMove = MoveFinder.negamax_helper(gs, valid_moves)
-            #AIMove = MoveFinder.minmax_helper(gs, valid_moves)
-            if AIMove is None:
-                print('no move found by engine')
-                AIMove = MoveFinder.find_random_move(valid_moves)
-            gs.make_move(AIMove)
-            move_made = True
-            animate = True
+            if not AIThinking:
+                AIThinking = True
+                AIMove = None
+                return_queue = Queue()
+                movefinder_process = Process(target=MoveFinder.negamax_helper, args=(gs, valid_moves, return_queue))
+                movefinder_process.start()
+                #AIMove = MoveFinder.negamax_helper(gs, valid_moves)
+                #AIMove = MoveFinder.minmax_helper(gs, valid_moves)
+            
+            if not movefinder_process.is_alive():
+                AIMove = return_queue.get()
+                if AIMove is None:
+                    print('no move found by engine')
+                    AIMove = MoveFinder.find_random_move(valid_moves)
+                gs.make_move(AIMove)
+                move_made = True
+                animate = True
+                AIThinking = False
 
         
         if move_made:
