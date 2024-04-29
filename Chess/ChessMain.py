@@ -7,6 +7,8 @@ import ChessEngine
 import MoveFinder
 
 WIDTH = HEIGHT = 512
+RIGHT_OFFSET = 250
+DOWN_OFFSET = 100
 DIM = 8
 SQ_SIZE = HEIGHT // DIM
 MAX_FPS = 60
@@ -24,9 +26,10 @@ def load_images():
 
 def main():
     p.init()
-    screen = p.display.set_mode((WIDTH, HEIGHT))
+    screen = p.display.set_mode((WIDTH + RIGHT_OFFSET, HEIGHT))
     clock = p.time.Clock()
-    screen.fill(p.Color("white"))
+    screen.fill(p.Color("black"))
+    move_log_font = p.font.SysFont('arialnarrow', 18, False, False)
     gs = ChessEngine.GameState()
     valid_moves = gs.get_valid_moves()
     print([x.get_notation() for x in valid_moves])
@@ -38,7 +41,7 @@ def main():
     sq_clicks = []
     game_over = False
     undo = False
-    human_white = False # if a human is playing as white
+    human_white = True # if a human is playing as white
     human_black = True # if a human is playing as black
 
     while running:
@@ -52,7 +55,7 @@ def main():
                     location = p.mouse.get_pos()
                     col = location[0] // SQ_SIZE
                     row = location[1] // SQ_SIZE
-                    if sq_selected == (row, col):
+                    if sq_selected == (row, col) or col >= 8 or row >= 8:
                         sq_selected = ()
                         sq_clicks = []
                     else:
@@ -118,33 +121,34 @@ def main():
             gs.insufficient_material = gs.is_insufficient_material()
             move_made = False
 
-        draw_gamestate(screen, gs, sq_selected, valid_moves)
+        draw_gamestate(screen, gs, sq_selected, valid_moves, move_log_font)
 
         if gs.checkmate: 
             game_over = True
             if gs.white_move:
-                draw_text(screen, 'checkmate! black wins')
+                draw_endgame_text(screen, 'checkmate! black wins')
             else:
-                draw_text(screen, 'checkmate! white wins')
+                draw_endgame_text(screen, 'checkmate! white wins')
         elif gs.stalemate:
             game_over = True
-            draw_text(screen, 'draw: stalemate')
+            draw_endgame_text(screen, 'draw: stalemate')
         elif gs.insufficient_material:
             game_over = True
-            draw_text(screen, 'draw: insufficient material')
+            draw_endgame_text(screen, 'draw: insufficient material')
         elif gs.threefold_repetition:
             game_over = True
-            draw_text(screen, 'draw: threefold repetition')
+            draw_endgame_text(screen, 'draw: threefold repetition')
         
         clock.tick(MAX_FPS)
         p.display.flip()
 
 
-def draw_gamestate(screen, gs, sq_selected, valid_moves):
+def draw_gamestate(screen, gs, sq_selected, valid_moves, move_log_font):
     draw_board(screen)
     highlight_last_move(screen, gs)
     highlight_avl_moves(screen, gs, sq_selected, valid_moves)
     draw_pieces(screen, gs.board)
+    draw_move_log(screen, gs, move_log_font)
 
 
 def draw_board(screen):
@@ -162,6 +166,7 @@ def draw_pieces(screen, board):
             piece = board[r][c]
             if piece != "--":  # not empty
                 screen.blit(IMAGES[piece], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
 
 def highlight_avl_moves(screen, gs, sq_selected, valid_moves):
     if sq_selected != ():
@@ -185,6 +190,36 @@ def highlight_last_move(screen, gs):
         s.fill(p.Color("blue"))
         screen.blit(s, (move.start_col * SQ_SIZE, move.start_row * SQ_SIZE))
         screen.blit(s, (move.end_col * SQ_SIZE, move.end_row * SQ_SIZE))
+
+
+def draw_move_log(screen, gs, font):
+    move_log_rect = p.Rect(WIDTH, 0, RIGHT_OFFSET, HEIGHT)
+    p.draw.rect(screen, p.Color("black"), move_log_rect)
+    move_log = gs.move_log
+    move_texts = []
+    for i in range(0, len(move_log), 2):
+        move_string = str(i // 2 + 1) + "." + move_log[i].get_notation() + " "
+        if i + 1 < len(move_log):
+            move_string += move_log[i + 1].get_notation() + " "
+        move_texts.append(move_string)
+    moves_per_row = 3 
+    padding = 5
+    text_y = padding
+    line_spacing = 2    
+    for i in range(0, len(move_texts), moves_per_row): 
+        text = ""
+        for j in range(moves_per_row):
+            if i + j < len(move_texts):
+                text += move_texts[i+j]
+
+        text_object = font.render(text, True, p.Color('white'))
+        text_location = move_log_rect.move(padding, text_y)
+        screen.blit(text_object, text_location)
+        text_y += text_object.get_height() + line_spacing
+
+
+
+
 
 def animate_move(move, screen, board, clock):
     delta_x = move.end_col - move.start_col
@@ -210,7 +245,8 @@ def animate_move(move, screen, board, clock):
         p.display.flip()
         clock.tick(MAX_FPS)
 
-def draw_text(screen, text):
+
+def draw_endgame_text(screen, text):
     font = p.font.SysFont('Courier', 32, True, False)
     text_object = font.render(text, 0, p.Color('Black'))
     # center the text
