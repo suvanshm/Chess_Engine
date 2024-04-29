@@ -27,10 +27,10 @@ def load_images():
 
 def main():
     p.init()
-    screen = p.display.set_mode((WIDTH + RIGHT_OFFSET, HEIGHT))
+    screen = p.display.set_mode((WIDTH + RIGHT_OFFSET, HEIGHT + DOWN_OFFSET))
     clock = p.time.Clock()
     screen.fill(p.Color("black"))
-    move_log_font = p.font.SysFont('arialnarrow', 18, False, False)
+    move_log_font = p.font.SysFont('Dejavu Sans Mono', 14, False, False)
     gs = ChessEngine.GameState()
     valid_moves = gs.get_valid_moves()
     print([x.get_notation() for x in valid_moves])
@@ -42,7 +42,7 @@ def main():
     sq_clicks = []
     game_over = False
     undo = False
-    human_white = False # if a human is playing as white
+    human_white = True # if a human is playing as white
     human_black = True # if a human is playing as black
     movefinder_process = None
     AIThinking = False
@@ -169,6 +169,7 @@ def draw_gamestate(screen, gs, sq_selected, valid_moves, move_log_font):
     highlight_avl_moves(screen, gs, sq_selected, valid_moves)
     draw_pieces(screen, gs.board)
     draw_move_log(screen, gs, move_log_font)
+    #draw_buttons(screen)
 
 
 def draw_board(screen):
@@ -218,26 +219,33 @@ def draw_move_log(screen, gs, font):
     move_log = gs.move_log
     move_texts = []
     for i in range(0, len(move_log), 2):
-        move_string = str(i // 2 + 1) + "." + move_log[i].get_notation() + " "
+        move_string = str(i // 2 + 1) + "." + move_log[i].get_notation() + ","
         if i + 1 < len(move_log):
-            move_string += move_log[i + 1].get_notation() + " "
+            move_string += move_log[i + 1].get_notation() + ""
         move_texts.append(move_string)
-    moves_per_row = 3 
     padding = 5
     text_y = padding
-    line_spacing = 2    
-    for i in range(0, len(move_texts), moves_per_row): 
-        text = ""
-        for j in range(moves_per_row):
-            if i + j < len(move_texts):
-                text += move_texts[i+j]
-
-        text_object = font.render(text, True, p.Color('white'))
-        text_location = move_log_rect.move(padding, text_y)
-        screen.blit(text_object, text_location)
-        text_y += text_object.get_height() + line_spacing
-
-
+    line_spacing = 2 
+    # add title 'move log' underlined 
+    text_object = font.render("Move Log", True, p.Color('white'))
+    text_location = move_log_rect.move(padding, padding)
+    screen.blit(text_object, text_location)
+    text_y += text_object.get_height() + line_spacing
+    line_width = move_log_rect.width - padding # maximum width of text in pixels
+    current_width = 0
+    for i in range(len(move_texts)):
+        text = move_texts[i]
+        text_width = font.size(text + " ")[0]
+        if current_width + text_width <= line_width:
+            text_location = move_log_rect.move(padding/2 + current_width, text_y)
+            screen.blit(font.render(text, True, p.Color('white')), text_location)
+            current_width += text_width
+        else:
+            text_y += font.size("Ag")[1] + line_spacing
+            current_width = 0
+            text_location = move_log_rect.move(padding/2 + current_width, text_y)
+            screen.blit(font.render(text, True, p.Color('white')), text_location)
+            current_width += text_width
 
 
 
