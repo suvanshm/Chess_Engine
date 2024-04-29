@@ -456,6 +456,7 @@ class Move:
         self.promotion = self.piece_moved[1] == "P" and (self.end_row == 0 or self.end_row == 7)
         self.enpassant = self.is_enpassant()
         self.castle = self.is_castle() 
+        self.check = self.is_check()
         if self.castle: 
             self.castle_type = "short" if self.end_col == 6 else "long"
 
@@ -463,6 +464,7 @@ class Move:
         if isinstance(other, Move):
             return self.move_ID == other.move_ID
         return False
+    
 
     def get_notation(self):
         """
@@ -495,8 +497,8 @@ class Move:
         # en passant
         if self.is_enpassant():
             output = file_map[self.start_col] + "x" + square
-            if self.gs.in_check(check_color=check_color):
-                output += "+"
+            # if self.gs.in_check(check_color=check_color): output += "+"
+            if self.check: output += "+"
             return output
 
         if self.piece_moved != "--":
@@ -509,8 +511,8 @@ class Move:
                 output = piece + "x" + square
             if self.promotion:
                 output += "=Q"
-            if self.gs.in_check(check_color=check_color):
-                output += "+"
+            #if self.gs.in_check(check_color=check_color): output += "+"
+            if self.check: output += "+"
             return output
         else:
             return None
@@ -529,3 +531,14 @@ class Move:
             return True
         return False
 
+    def is_check(self): 
+        # classify move as check if it results in the opponent being in check
+        if self.piece_moved == '--': 
+            return False
+        
+        rev_color_map = {"w": "b", "b": "w"}
+        check_color = rev_color_map[self.piece_moved[0]] # color of the opponent
+        self.gs.make_move(self, print_move=False) 
+        in_check =  self.gs.in_check(check_color=check_color)
+        self.gs.undo_move() 
+        return in_check
