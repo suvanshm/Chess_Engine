@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import time
 
 piece_values = {
     'P': 100,
@@ -31,7 +32,7 @@ pst_white_knight = np.array([
     np.array([-30,  0, 15, 20, 20, 15,  0,-30]),
     np.array([-30,  5, 10, 15, 15, 10,  5,-30]),
     np.array([-40,-20,  0,  5,  5,  0,-20,-40]),
-    np.array([-50,-40,-30,-30,-30,-30,-40,-50])
+    np.array([-50,-25,-30,-30,-30,-30,-25,-50])
 ])
 
 pst_black_knight = np.flip(pst_white_knight, axis=0)
@@ -118,27 +119,30 @@ position_scores = {
     'bK': pst_black_king 
     }
 
-checkmate_score = 1000
+checkmate_score = 20000
 draw_score = 0
 num_evaluations = 0
-DEPTH = 3
+DEPTH = 3 
 
 def find_random_move(valid_moves):
     return valid_moves[random.randint(0, len(valid_moves)-1)]
 
-def negamax_helper(gs, valid_moves):
+def negamax_helper(gs, valid_moves, return_queue):
     global best_move, num_evaluations
     best_move = None
     random.shuffle(valid_moves)
     num_evaluations = 0 # counter is reset
     #negamax(gs, valid_moves, DEPTH, color= 1 if gs.white_move else -1)
+    start = time.time()
     negamax_alphabeta(gs, valid_moves, DEPTH, -checkmate_score, checkmate_score, 1 if gs.white_move else -1)
     if best_move is None:
         print("Negamax helper returning no move")
     else: 
-        print("Negamax helper returning move: " + best_move.get_notation())
+        end = time.time()
+        print("time taken: " + "{:.2f}".format(end-start))
     print("number of evaluations: " + str(num_evaluations))
-    return best_move
+    #return best_move
+    return_queue.put(best_move)
 
 
 def negamax_alphabeta(gs, valid_moves, depth, alpha, beta, color):
@@ -157,7 +161,8 @@ def negamax_alphabeta(gs, valid_moves, depth, alpha, beta, color):
             max_eval = eval
             if depth == DEPTH:
                 best_move = move
-                print("best move is: " + best_move.get_notation() + "  , score = " + str(max_eval/100))
+                turn = 1 if gs.white_move else -1
+                print("best move is: " + best_move.get_notation() + "  , score = " + str(turn * max_eval/100))
         gs.undo_move()
         if max_eval > alpha:
             alpha = max_eval
