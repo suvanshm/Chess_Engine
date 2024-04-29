@@ -419,7 +419,7 @@ class GameState:
         #print(board_string)
         if board_string in self.board_history:
             self.board_history[board_string] += 1
-            print(self.board_history[board_string], ":", board_string)
+            #print(self.board_history[board_string], ":", board_string)
         else:
             #print("NEW: ", board_string)
             self.board_history[board_string] = 1
@@ -431,7 +431,7 @@ class GameState:
         if board_string in self.board_history:
             #print("inside loop")
             self.board_history[board_string] -= 1
-            print(self.board_history[board_string], ":", board_string)
+            #print(self.board_history[board_string], ":", board_string)
             if self.board_history[board_string] == 0:
                 #print("DELETING: ", board_string)
                 del self.board_history[board_string]
@@ -455,10 +455,10 @@ class Move:
         self.move_ID = int(str(self.start_row) + str(self.start_col) + str(self.end_row) + str(self.end_col))
         self.promotion = self.piece_moved[1] == "P" and (self.end_row == 0 or self.end_row == 7)
         self.enpassant = self.is_enpassant()
-        self.castle = self.is_castle() 
-        self.check = self.is_check()
+        self.castle = self.is_castle()
         if self.castle: 
-            self.castle_type = "short" if self.end_col == 6 else "long"
+            self.castle_type = "short" if self.end_col == 6 else "long" 
+        self.check = self.is_check()
 
     def __eq__(self, other):
         if isinstance(other, Move):
