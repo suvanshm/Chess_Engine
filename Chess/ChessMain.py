@@ -46,6 +46,7 @@ def main():
     human_black = True # if a human is playing as black
     movefinder_process = None
     AIThinking = False
+    flip = False # controls board flip display
 
     while running:
         human_turn = (gs.white_move and human_white) or (not gs.white_move and human_black)
@@ -56,8 +57,13 @@ def main():
             elif e.type == p.MOUSEBUTTONDOWN:
                 if not game_over and human_turn: 
                     location = p.mouse.get_pos()
-                    col = location[0] // SQ_SIZE
-                    row = location[1] // SQ_SIZE
+                    if flip:
+                        col = (WIDTH - location[0]) // SQ_SIZE
+                        row = (HEIGHT - location[1]) // SQ_SIZE
+                    else:
+                        col = location[0] // SQ_SIZE
+                        row = location[1] // SQ_SIZE
+                    
                     if sq_selected == (row, col) or col >= 8 or row >= 8:
                         sq_selected = ()
                         sq_clicks = []
@@ -105,6 +111,9 @@ def main():
                     if AIThinking: 
                         movefinder_process.terminate()
                         AIThinking = False
+                
+                if e.key == p.K_f:
+                    flip = not flip
 
         
         # AI Move Finder Logic 
@@ -131,7 +140,7 @@ def main():
         
         if move_made:
             if animate:
-                animate_move(gs.move_log[-1], screen, gs.board, clock)
+                animate_move(gs.move_log[-1], screen, gs.board, clock, flip)
             valid_moves = gs.get_valid_moves()
             print([x.get_notation() for x in valid_moves])
             if undo == False: 
@@ -141,7 +150,7 @@ def main():
             gs.insufficient_material = gs.is_insufficient_material()
             move_made = False
 
-        draw_gamestate(screen, gs, sq_selected, valid_moves, move_log_font)
+        draw_gamestate(screen, gs, sq_selected, valid_moves, move_log_font, flip)
 
         if gs.checkmate: 
             game_over = True
@@ -163,58 +172,86 @@ def main():
         p.display.flip()
 
 
-def draw_gamestate(screen, gs, sq_selected, valid_moves, move_log_font):
-    draw_board(screen)
-    highlight_last_move(screen, gs)
-    highlight_avl_moves(screen, gs, sq_selected, valid_moves)
-    draw_pieces(screen, gs.board)
+def draw_gamestate(screen, gs, sq_selected, valid_moves, move_log_font, flip):
+    draw_board(screen, flip)
+    highlight_last_move(screen, gs, flip)
+    highlight_avl_moves(screen, gs, sq_selected, valid_moves, flip)
+    draw_pieces(screen, gs.board, flip)
     draw_move_log(screen, gs, move_log_font)
+    draw_instructions(screen)
     #draw_buttons(screen)
 
 
-def draw_board(screen):
+def draw_instructions(screen):
+    font = p.font.SysFont('Dejavu Sans Mono', 16, False, False)
+    text = "press 'z' to undo, 'r' to reset, 'f' to flip board"
+    text_object = font.render(text, True, p.Color('white'))
+    text_location = p.Rect(5, HEIGHT + DOWN_OFFSET - 20, WIDTH, 50)
+    # Draw a rectangle filled with the background color over the text area
+    p.draw.rect(screen, p.Color('black'), text_location)
+    screen.blit(text_object, text_location)
+    # draw vertical divider line 
+    p.draw.line(screen, p.Color('white'), (WIDTH, 0), (WIDTH, HEIGHT + DOWN_OFFSET), 1)
+
+def draw_board(screen, flip):
     #colors = [p.Color("white"), p.Color("gray")]
     colors = [(241, 217, 192), (169, 121, 101)] # light and dark brown
     for r in range(DIM):
         for c in range(DIM):
             color = colors[(r + c) % 2]
-            p.draw.rect(screen, color, p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+            if flip:
+                p.draw.rect(screen, color, p.Rect((DIM-1-c) * SQ_SIZE, (DIM-1-r) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+            else:
+                p.draw.rect(screen, color, p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 
-def draw_pieces(screen, board):
+def draw_pieces(screen, board, flip):
     for r in range(DIM):
         for c in range(DIM):
             piece = board[r][c]
             if piece != "--":  # not empty
-                screen.blit(IMAGES[piece], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+                if flip: 
+                    screen.blit(IMAGES[piece], p.Rect((DIM - c - 1) * SQ_SIZE, (DIM - r - 1) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+                else:
+                    screen.blit(IMAGES[piece], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
 
-def highlight_avl_moves(screen, gs, sq_selected, valid_moves):
+def highlight_avl_moves(screen, gs, sq_selected, valid_moves, flip):
     if sq_selected != ():
         r, c = sq_selected
         if gs.board[r][c][0] == ("w" if gs.white_move else "b"):
             s = p.Surface((SQ_SIZE, SQ_SIZE))
             s.set_alpha(50)  # transparency value
             s.fill(p.Color("red"))
-            screen.blit(s, (c * SQ_SIZE, r * SQ_SIZE))
+            if flip:
+                screen.blit(s, ((DIM-1-c) * SQ_SIZE, (DIM-1-r) * SQ_SIZE))
+            else:
+                screen.blit(s, (c * SQ_SIZE, r * SQ_SIZE))
             s.fill(p.Color("green"))
             for move in valid_moves:
                 if move.start_row == r and move.start_col == c:
-                    screen.blit(s, (move.end_col * SQ_SIZE, move.end_row * SQ_SIZE))
+                    if flip:
+                        screen.blit(s, ((DIM-1-move.end_col) * SQ_SIZE, (DIM-1-move.end_row) * SQ_SIZE))
+                    else:
+                        screen.blit(s, (move.end_col * SQ_SIZE, move.end_row * SQ_SIZE))
 
 
-def highlight_last_move(screen, gs):
+def highlight_last_move(screen, gs, flip):
     if len(gs.move_log) != 0:
         move = gs.move_log[-1]
         s = p.Surface((SQ_SIZE, SQ_SIZE))
         s.set_alpha(50)
         s.fill(p.Color("blue"))
-        screen.blit(s, (move.start_col * SQ_SIZE, move.start_row * SQ_SIZE))
-        screen.blit(s, (move.end_col * SQ_SIZE, move.end_row * SQ_SIZE))
+        if flip:
+            screen.blit(s, ((DIM-1-move.start_col) * SQ_SIZE, (DIM-1-move.start_row) * SQ_SIZE))
+            screen.blit(s, ((DIM-1-move.end_col) * SQ_SIZE, (DIM-1-move.end_row) * SQ_SIZE))
+        else:
+            screen.blit(s, (move.start_col * SQ_SIZE, move.start_row * SQ_SIZE))
+            screen.blit(s, (move.end_col * SQ_SIZE, move.end_row * SQ_SIZE))
 
 
 def draw_move_log(screen, gs, font):
-    move_log_rect = p.Rect(WIDTH, 0, RIGHT_OFFSET, HEIGHT)
+    move_log_rect = p.Rect(WIDTH, 0, RIGHT_OFFSET, HEIGHT + DOWN_OFFSET)
     p.draw.rect(screen, p.Color("black"), move_log_rect)
     move_log = gs.move_log
     move_texts = []
@@ -249,7 +286,7 @@ def draw_move_log(screen, gs, font):
 
 
 
-def animate_move(move, screen, board, clock):
+def animate_move(move, screen, board, clock, flip):
     delta_x = move.end_col - move.start_col
     delta_y = move.end_row - move.start_row
     frames_per_square = 5  # frames to move one square
@@ -258,18 +295,24 @@ def animate_move(move, screen, board, clock):
     for frame in range(frame_count + 1):
         r, c = (move.start_row + delta_y * frame / frame_count, 
                 move.start_col + delta_x * frame / frame_count)
-        draw_board(screen)
-        draw_pieces(screen, board)
+        draw_board(screen, flip)
+        draw_pieces(screen, board, flip)
         # erase the piece moved from its ending square
         # color = 'white' if (move.end_row + move.end_col) % 2 == 0 else 'gray'
         color = (241, 217, 192) if (move.end_row + move.end_col) % 2 == 0 else (169, 121, 101) # light and dark brown 
-        end_square = p.Rect(move.end_col * SQ_SIZE, move.end_row * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+        if flip:
+            end_square = p.Rect((DIM-1-move.end_col) * SQ_SIZE, (DIM-1-move.end_row) * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+        else:
+            end_square = p.Rect(move.end_col * SQ_SIZE, move.end_row * SQ_SIZE, SQ_SIZE, SQ_SIZE)
         p.draw.rect(screen, color, end_square)
         # draw captured piece onto rectangle
         if move.piece_captured != '--':
             screen.blit(IMAGES[move.piece_captured], end_square)
         # draw moving piece
-        screen.blit(IMAGES[move.piece_moved], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+        if flip:
+            screen.blit(IMAGES[move.piece_moved], p.Rect((DIM-1-c) * SQ_SIZE, (DIM-1-r) * SQ_SIZE, SQ_SIZE, SQ_SIZE))
+        else:
+            screen.blit(IMAGES[move.piece_moved], p.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE))
         p.display.flip()
         clock.tick(MAX_FPS)
 
