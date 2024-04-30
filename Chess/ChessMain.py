@@ -30,7 +30,7 @@ def main():
     screen = p.display.set_mode((WIDTH + RIGHT_OFFSET, HEIGHT + DOWN_OFFSET))
     clock = p.time.Clock()
     screen.fill(p.Color("black"))
-    move_log_font = p.font.SysFont('Dejavu Sans Mono', 14, False, False)
+    move_log_font = p.font.SysFont('Dejavu Sans Mono', 15, False, False)
     gs = ChessEngine.GameState()
     valid_moves = gs.get_valid_moves()
     print([x.get_notation() for x in valid_moves])
@@ -43,7 +43,7 @@ def main():
     game_over = False
     undo = False
     human_white = True # if a human is playing as white
-    human_black = True # if a human is playing as black
+    human_black = False # if a human is playing as black
     movefinder_process = None
     AIThinking = False
     flip = False # controls board flip display
@@ -114,7 +114,48 @@ def main():
                 
                 if e.key == p.K_f:
                     flip = not flip
-
+                
+                if e.key == p.K_b: # play new game as black against AI
+                    human_white = False
+                    human_black = True
+                    gs = ChessEngine.GameState()
+                    valid_moves = gs.get_valid_moves()
+                    sq_selected = ()
+                    sq_clicks = []
+                    move_made = False
+                    animate = False
+                    game_over = False
+                    if AIThinking: 
+                        movefinder_process.terminate()
+                        AIThinking = False 
+                
+                if e.key == p.K_w: # play new game as white against AI
+                    human_white = True
+                    human_black = False
+                    gs = ChessEngine.GameState()
+                    valid_moves = gs.get_valid_moves()
+                    sq_selected = ()
+                    sq_clicks = []
+                    move_made = False
+                    animate = False
+                    game_over = False
+                    if AIThinking: 
+                        movefinder_process.terminate()
+                        AIThinking = False
+                
+                if e.key == p.K_t: # play new game as two-player
+                    human_white = True
+                    human_black = True
+                    gs = ChessEngine.GameState()
+                    valid_moves = gs.get_valid_moves()
+                    sq_selected = ()
+                    sq_clicks = []
+                    move_made = False
+                    animate = False
+                    game_over = False
+                    if AIThinking: 
+                        movefinder_process.terminate()
+                        AIThinking = False
         
         # AI Move Finder Logic 
         if not game_over and not human_turn:
@@ -179,19 +220,40 @@ def draw_gamestate(screen, gs, sq_selected, valid_moves, move_log_font, flip):
     draw_pieces(screen, gs.board, flip)
     draw_move_log(screen, gs, move_log_font)
     draw_instructions(screen)
-    #draw_buttons(screen)
+    draw_evaluation(screen)
 
+def draw_evaluation(screen, evaluation=-3.57):
+    font = p.font.SysFont('Dejavu Sans Mono', 15, False, False)
+    text_object = font.render("eval: " + str(evaluation), 0, p.Color('white'))
+    text_location = p.Rect(400, HEIGHT + DOWN_OFFSET - 80, 100, 50)
+    p.draw.rect(screen, p.Color('black'), text_location)
+    screen.blit(text_object, text_location)
 
 def draw_instructions(screen):
-    font = p.font.SysFont('Dejavu Sans Mono', 16, False, False)
-    text = "press 'z' to undo, 'r' to reset, 'f' to flip board"
+    font1 = p.font.SysFont('Dejavu Sans Mono', 15, True, False)
+    text1 = "fishyanand: a chess engine(?)"
+    text_object1 = font1.render(text1, True, p.Color('white'))
+    text_location1 = p.Rect(5, HEIGHT + DOWN_OFFSET - 80, WIDTH, 50)
+    p.draw.rect(screen, p.Color('black'), text_location1)
+    screen.blit(text_object1, text_location1)
+
+    font = p.font.SysFont('Dejavu Sans Mono', 15, False, False)
+    text0 = "'z': undo, 'r': reset, 'f': flip"
+    text_object0 = font.render(text0, True, p.Color('white'))
+    text_location0 = p.Rect(5, HEIGHT + DOWN_OFFSET - 40, WIDTH, 50)
+    p.draw.rect(screen, p.Color('black'), text_location0)
+    screen.blit(text_object0, text_location0)
+
+    text = "'w': play as white, 'b': play as black, 't': two-player"
     text_object = font.render(text, True, p.Color('white'))
     text_location = p.Rect(5, HEIGHT + DOWN_OFFSET - 20, WIDTH, 50)
     # Draw a rectangle filled with the background color over the text area
     p.draw.rect(screen, p.Color('black'), text_location)
     screen.blit(text_object, text_location)
+
     # draw vertical divider line 
     p.draw.line(screen, p.Color('white'), (WIDTH, 0), (WIDTH, HEIGHT + DOWN_OFFSET), 1)
+
 
 def draw_board(screen, flip):
     #colors = [p.Color("white"), p.Color("gray")]
@@ -264,7 +326,7 @@ def draw_move_log(screen, gs, font):
     text_y = padding
     line_spacing = 2 
     # add title 'move log' underlined 
-    text_object = font.render("Move Log", True, p.Color('white'))
+    text_object = font.render("move log", True, p.Color('white'))
     text_location = move_log_rect.move(padding, padding)
     screen.blit(text_object, text_location)
     text_y += text_object.get_height() + line_spacing
