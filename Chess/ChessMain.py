@@ -5,7 +5,7 @@ Driver file. Handles user input and displays game state.
 import pygame as p
 import ChessEngine
 import MoveFinder
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Manager
 
 WIDTH = HEIGHT = 512
 RIGHT_OFFSET = 250
@@ -47,6 +47,8 @@ def main():
     movefinder_process = None
     AIThinking = False
     flip = False # controls board flip display
+    manager = Manager()
+    return_queue = manager.Queue()
 
     while running:
         human_turn = (gs.white_move and human_white) or (not gs.white_move and human_black)
@@ -162,7 +164,6 @@ def main():
             if not AIThinking:
                 AIThinking = True
                 AIMove = None
-                return_queue = Queue()
                 movefinder_process = Process(target=MoveFinder.negamax_helper, args=(gs, valid_moves, return_queue))
                 movefinder_process.start()
                 #AIMove = MoveFinder.negamax_helper(gs, valid_moves)
@@ -177,7 +178,10 @@ def main():
                 move_made = True
                 animate = True
                 AIThinking = False
-
+       
+        # if movefinder_process is not None and movefinder_process.is_alive():
+        #     draw_evaluation(screen)
+        #     movefinder_process.join() 
         
         if move_made:
             if animate:
@@ -220,11 +224,11 @@ def draw_gamestate(screen, gs, sq_selected, valid_moves, move_log_font, flip):
     draw_pieces(screen, gs.board, flip)
     draw_move_log(screen, gs, move_log_font)
     draw_instructions(screen)
-    draw_evaluation(screen)
+    #draw_evaluation(screen)
 
 def draw_evaluation(screen, evaluation=-3.57):
     font = p.font.SysFont('Dejavu Sans Mono', 15, False, False)
-    text_object = font.render("eval: " + str(evaluation), 0, p.Color('white'))
+    text_object = font.render("AI thinking...", 0, p.Color('white'))
     text_location = p.Rect(400, HEIGHT + DOWN_OFFSET - 80, 100, 50)
     p.draw.rect(screen, p.Color('black'), text_location)
     screen.blit(text_object, text_location)
