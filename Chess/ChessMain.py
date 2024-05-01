@@ -44,11 +44,8 @@ def main():
     undo = False
     human_white = True # if a human is playing as white
     human_black = False # if a human is playing as black
-    movefinder_process = None
     AIThinking = False
     flip = False # controls board flip display
-    manager = Manager()
-    return_queue = manager.Queue()
 
     while running:
         human_turn = (gs.white_move and human_white) or (not gs.white_move and human_black)
@@ -97,9 +94,8 @@ def main():
                     gs.insufficient_material = False
                     gs.threefold_repetition = False
                     if AIThinking: 
-                        movefinder_process.terminate()
                         AIThinking = False
-                        human_turn = True
+                        #human_turn = True
 
 
                 if e.key == p.K_r:
@@ -111,7 +107,6 @@ def main():
                     animate = False
                     game_over = False
                     if AIThinking: 
-                        movefinder_process.terminate()
                         AIThinking = False
                 
                 if e.key == p.K_f:
@@ -127,8 +122,8 @@ def main():
                     move_made = False
                     animate = False
                     game_over = False
+                    flip = True
                     if AIThinking: 
-                        movefinder_process.terminate()
                         AIThinking = False 
                 
                 if e.key == p.K_w: # play new game as white against AI
@@ -142,7 +137,6 @@ def main():
                     animate = False
                     game_over = False
                     if AIThinking: 
-                        movefinder_process.terminate()
                         AIThinking = False
                 
                 if e.key == p.K_t: # play new game as two-player
@@ -156,7 +150,6 @@ def main():
                     animate = False
                     game_over = False
                     if AIThinking: 
-                        movefinder_process.terminate()
                         AIThinking = False
         
         # AI Move Finder Logic 
@@ -164,27 +157,21 @@ def main():
             if not AIThinking:
                 AIThinking = True
                 AIMove = None
-                movefinder_process = Process(target=MoveFinder.negamax_helper, args=(gs, valid_moves, return_queue))
-                movefinder_process.start()
-                #AIMove = MoveFinder.negamax_helper(gs, valid_moves)
-                #AIMove = MoveFinder.minmax_helper(gs, valid_moves)
-            
-            if not movefinder_process.is_alive():
-                AIMove = return_queue.get()
+                AIMove = MoveFinder.negamax_helper(gs, valid_moves)
+                #print('movefinder process returned move: ' + AIMove.get_notation())
                 if AIMove is None:
                     print('no move found by engine')
                     AIMove = MoveFinder.find_random_move(valid_moves)
+                print('before make move')
                 gs.make_move(AIMove)
+                print('after make move')
                 move_made = True
                 animate = True
                 AIThinking = False
-       
-        # if movefinder_process is not None and movefinder_process.is_alive():
-        #     draw_evaluation(screen)
-        #     movefinder_process.join() 
         
         if move_made:
             if animate:
+                print('animating move')
                 animate_move(gs.move_log[-1], screen, gs.board, clock, flip)
             valid_moves = gs.get_valid_moves()
             print([x.get_notation() for x in valid_moves])

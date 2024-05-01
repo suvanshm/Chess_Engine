@@ -1,6 +1,7 @@
 import random
 import numpy as np
 import time
+import crcmod 
 
 piece_values = {
     'P': 100,
@@ -86,7 +87,7 @@ pst_white_king = np.array([
     np.array([-20,-30,-30,-40,-40,-30,-30,-20]),
     np.array([-10,-20,-20,-20,-20,-20,-20,-10]),
     np.array([ 20, 20,  0,  0,  0,  0, 20, 20]),
-    np.array([ 20, 30, 10,  0,  0, 10, 30, 20])
+    np.array([ 20, 30, 0,  0,  0, 0, 30, 20])
 ])
 
 pst_black_king = np.flip(pst_white_king, axis=0)
@@ -122,12 +123,12 @@ position_scores = {
 checkmate_score = 20000
 draw_score = 0
 num_evaluations = 0
-DEPTH = 3 
+DEPTH = 3
 
 def find_random_move(valid_moves):
     return valid_moves[random.randint(0, len(valid_moves)-1)]
 
-def negamax_helper(gs, valid_moves, return_queue):
+def negamax_helper(gs, valid_moves):
     global best_move, num_evaluations
     best_move = None
     random.shuffle(valid_moves)
@@ -141,17 +142,15 @@ def negamax_helper(gs, valid_moves, return_queue):
         end = time.time()
         print("time taken: " + "{:.2f}".format(end-start))
     print("number of evaluations: " + str(num_evaluations))
-    #return best_move
-    return_queue.put(best_move)
-
+    return best_move
 
 def negamax_alphabeta(gs, valid_moves, depth, alpha, beta, color):
     global best_move
     if depth <= 0 or gs.checkmate or gs.stalemate or gs.threefold_repetition or gs.insufficient_material:
         return color * evaluate_board(gs)
 
-    # move ordering - implement later
-    max_eval = float('-inf')
+    valid_moves = move_heuristic_ordering(gs, valid_moves)
+    max_eval = -checkmate_score
     for move in valid_moves:
         gs.make_move(move, print_move=False)
         next_moves = gs.get_valid_moves()
@@ -169,6 +168,29 @@ def negamax_alphabeta(gs, valid_moves, depth, alpha, beta, color):
         if alpha >= beta:
             break
     return max_eval
+
+
+def move_heuristic_ordering(gs, valid_moves):
+    scores = np.zeros(len(valid_moves))
+    for i, move in enumerate(valid_moves):
+        # capture move
+        if gs.board[move.end_row][move.end_col] != "--":
+            # score proportional to pieces 
+            scores[i] += (piece_values[move.piece_captured[1]] - piece_values[move.piece_moved[1]])/100
+        # pawn promotion
+        if move.promotion: 
+            scores[i] += 8
+        # check move
+        if move.check:
+            scores[i] += 2
+        if move.castle:
+            scores[i] += 3
+        # otherwise, keep pawn moves at the end 
+        if move.piece_moved[1] == 'P':
+            scores[i] -= 1
+    # sort moves by score
+    valid_moves = [x for _, x in sorted(zip(scores, valid_moves), key=lambda pair: pair[0], reverse=True)]
+    return valid_moves
 
 def negamax(gs, valid_moves, depth, color):
     global best_move
@@ -235,9 +257,18 @@ def minmax(gs, valid_moves, depth=DEPTH):
                     print("best move is: " + best_move.get_notation())
         return min_eval
 
+# Define a CRC64 hash function
+crc64 = crcmod.predefined.mkPredefinedCrcFun('crc-64')
+
+# Initialize the score cache dictionary
+score_cache = {}
 
 def evaluate_board(gs): 
-    global num_evaluations
+    global num_evaluations, score_cache
+    board_str = np.array2string(gs.board)
+    hash_key = crc64(board_str.encode())
+    if hash_key in score_cache:
+        return score_cache[hash_key]
     num_evaluations += 1
     if gs.checkmate:
         if gs.white_move:
@@ -248,6 +279,7 @@ def evaluate_board(gs):
         return draw_score
     score = score_material(gs)
     #print("material score: " + str(score))
+    score_cache[hash_key] = score
     return score
 
 
