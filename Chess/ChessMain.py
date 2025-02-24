@@ -2,6 +2,11 @@
 Driver file. Handles user input and displays game state.
 """
 
+# profiler to diagnose lag
+import cProfile
+import pstats
+
+
 import pygame as p
 import ChessEngine
 import MoveFinder
@@ -392,4 +397,12 @@ def draw_endgame_text(screen, text):
 
 
 if __name__ == '__main__':
+    # profiling the main function
+    pr = cProfile.Profile()
+    pr.enable()
     main()
+    pr.disable()
+
+    with open('profile_results.txt', 'w') as f: 
+        ps = pstats.Stats(pr, stream  = f).sort_stats('cumulative')
+        ps.print_stats()
